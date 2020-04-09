@@ -9,8 +9,11 @@ const app = express();
 const server = http.createServer(app);
 const io  = socketio(server);
 
+var redis = require('socket.io-redis');
+io.adapter(redis({ host: process.env.REDIS_ENDPOINT, port: 6379 }));
+
 app.use(express.static(path.join(__dirname,'public')));
-const botName = 'Admin';
+const botName = 'ChatApp';
 
 io.on('connection',socket =>{
     socket.on('joinRoom', ({username,room})=>{
@@ -18,12 +21,12 @@ io.on('connection',socket =>{
 
         socket.join(user.room);
     
-        socket.emit('message', formatMessage(botName, "welcome!!"));
+        socket.emit('message', formatMessage(botName, `welcome to ${user.room}`));
 
         socket.broadcast.to(user.room).emit('message',formatMessage(botName,`${user.username} is connected`));
 
         io.to(user.room).emit('roomUsers',{
-            room: getRoomUsers.room,
+            room: user.room,
             users: getRoomUsers(user.room)     
         });
 
@@ -37,13 +40,12 @@ io.on('connection',socket =>{
                 io.to(user.room).emit('message',formatMessage(botName,`${user.username} has left the chat`));
             }
             io.to(user.room).emit('roomUsers',{
-                room: getRoomUsers.room,
+                room: user.room,
                 users: getRoomUsers(user.room)     
             });
         });
     });
 });
-
-const PORT = process.env.PORT || 3000;
+const PORT = process.argv[2] || 4000;
 
 server.listen(PORT, ()=> console.log(`Server running on port ${PORT}`));
